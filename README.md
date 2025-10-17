@@ -1,4 +1,4 @@
-
+# What’s in this repo
 manual_hs256_demo.py — a minimal, self-contained script that:
 
 builds a JWT (header + payload → Base64URL → HMAC-SHA256 signature),
