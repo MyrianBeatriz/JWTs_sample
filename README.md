@@ -9,7 +9,7 @@ demonstrates tampering (payload changed without re-signing → verification fail
 
 demonstrates expiry handling.
 
-Quick goals
+# Quick goals
 
 See how header, payload, and signature are created and combined.
 
@@ -17,22 +17,22 @@ Observe what happens when you tamper with the payload.
 
 Practice generating secure secrets and understand why you must never skip verification.
 
-Requirements
+# Requirements
 
 Python 3.8+ (works on 3.7 as well)
 
 No external libraries required for the manual demo.
 
-(Optional) PyJWT[crypto] and cryptography if you want RS256 examples later.
+# (Optional) PyJWT[crypto] and cryptography if you want RS256 examples later.
 
 # optional, for PyJWT-based experiments
 pip install "PyJWT[crypto]"
 
-Files
+# Files
 
 manual_hs256_demo.py — main script (copy/paste from the lesson).
 
-Functions:
+# Functions:
 
 b64url_encode(data: bytes) -> str — Base64URL-encode (no padding).
 
@@ -42,7 +42,7 @@ make_jwt_hs256(payload: dict, secret: str, header: dict=None) -> str — produce
 
 verify_jwt_hs256(token: str, secret: str, verify_exp: bool=True) -> dict — verify signature and exp.
 
-How to run
+# How to run
 
 Save manual_hs256_demo.py into a folder.
 
@@ -53,12 +53,12 @@ source venv/bin/activate    # macOS / Linux
 # .\venv\Scripts\Activate.ps1 on Windows PowerShell
 
 
-Run:
+# Run:
 
 python manual_hs256_demo.py
 
 
-You should see:
+## You should see:
 
 A generated JWT string: header.payload.signature
 
