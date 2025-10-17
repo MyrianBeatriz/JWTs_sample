@@ -90,18 +90,39 @@ def make_jwt_hs256(payload: dict, secret: str, header: dict=None) -> str:
     sig_b64 = b64url_encode(signature)
     return f"{header_b64}.{payload_b64}.{sig_b64}"
 
+### verify_jwt_hs256 — verifying a token
 def verify_jwt_hs256(token: str, secret: str, verify_exp: bool=True) -> dict:
     try:
         header_b64, payload_b64, sig_b64 = token.split('.')
     except ValueError:
         raise ValueError("Token must have exactly two dots (header.payload.signature)")
+    '''
+    Note: Token must have all parts. If not, reject.
+    '''
     signing_input = f"{header_b64}.{payload_b64}".encode('ascii')
     expected_sig = hmac.new(secret.encode('utf-8'), signing_input, hashlib.sha256).digest()
     actual_sig = b64url_decode(sig_b64)
+    '''
+    - Rebuild the exact bytes that were originally signed: the ASCII of "<header_b64>.<payload_b64>".
+    Note: This must match exactly what the issuer signed (same Base64URL, no padding, one dot).
+    - Decode the provided signature to raw bytes.
+    '''
+
+    ### Compare signatures
     if not hmac.compare_digest(expected_sig, actual_sig):
         raise ValueError("Invalid signature (verification failed)")
+    '''
+    Use hmac.compare_digest() for constant-time comparison to avoid timing attacks leaking whether bytes match.
+    If different → token forged/tampered → reject.
+    '''
+    ### Decode payload/header back to Python dicts. Now you can inspect claims.
     payload = json.loads(b64url_decode(payload_b64).decode('utf-8'))
     header = json.loads(b64url_decode(header_b64).decode('utf-8'))
+
+    ### Check expiry.
+    '''
+    Note the comparison now >= exp means token is invalid at or after the exp time. exp must be integer seconds since epoch.
+    '''
     if verify_exp and "exp" in payload:
         now = int(time.time())
         if now >= int(payload["exp"]):
@@ -109,28 +130,31 @@ def verify_jwt_hs256(token: str, secret: str, verify_exp: bool=True) -> dict:
     return {"header": header, "payload": payload}
 
 if __name__ == "__main__":
-    secret = "my-very-strong-secret-123!"
+    secret = "my-very-strong-secret-123!" ### secret is the HMAC secret (keep it secret).
     now = int(time.time())
     payload = {
         "sub": "user-1001",
         "name": "Myrian",
         "admin": False,
-        "iat": now,
-        "exp": now + 60  # expires in 60 seconds
+        "iat": now, # iat issued-at,
+        "exp": now + 60  # exp expiry (now + 60 seconds, so token valid for 60s
     }
 
+    ### Step 1: Generate
     print("1) Generate token (manual HS256)\n")
     token = make_jwt_hs256(payload, secret)
-    print(token, "\n")
+    print(token, "\n") #Output: a long string header.payload.signature. Save it.
 
+    ### Step 2: verify
     print("2) Verify token (correct secret)\n")
     try:
         verified = verify_jwt_hs256(token, secret)
         print("Verified OK. Header:", verified["header"])
-        print("Payload:", verified["payload"])
+        print("Payload:", verified["payload"]) ### Should print header and payload JSON — verification succeeded.
     except Exception as e:
         print("Verification failed:", e)
 
+    ### Step 3: Tamper
     print("\n3) Tamper payload (flip admin -> true) without re-signing and verify (should fail)\n")
     h_b64, p_b64, s_b64 = token.split('.')
     p = json.loads(b64url_decode(p_b64).decode('utf-8'))
@@ -143,10 +167,15 @@ if __name__ == "__main__":
         print("Unexpected: tampered token verified")
     except Exception as e:
         print("Expected verification failure:", e)
+    '''
+    We changed the payload (made admin: True) but kept the old signature. 
+    Verification will recompute expected signature over the modified payload and fail — that’s the whole defense.
+    '''
 
+    # Step 4: Expired token
     print("\n4) Expired token test (create token with exp in the past)\n")
     payload_expired = payload.copy()
-    payload_expired['exp'] = now - 10
+    payload_expired['exp'] = now - 10 #Create payload with exp = now - 10 and sign it. Verification should fail with "Token expired".
     expired_token = make_jwt_hs256(payload_expired, secret)
     try:
         verify_jwt_hs256(expired_token, secret)
