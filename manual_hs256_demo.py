@@ -130,7 +130,7 @@ def verify_jwt_hs256(token: str, secret: str, verify_exp: bool=True) -> dict:
     return {"header": header, "payload": payload}
 
 if __name__ == "__main__":
-    secret = "my-very-strong-secret-123!" ### secret is the HMAC secret (keep it secret).
+    secret = "my-very-strong-secret-123!" ### secret is the HMAC secret (keep it secret). DON'T EVER WRITE HARD-CODED CREDS, THIS IS JUST FOR TEST
     now = int(time.time())
     payload = {
         "sub": "user-1001",
